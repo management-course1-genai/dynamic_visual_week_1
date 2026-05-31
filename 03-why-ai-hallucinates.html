@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why These Systems Hallucinate — MokshPath</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --orange:#E87A2E;--orange-dark:#D06A20;--orange-light:#F5943E;--orange-glow:rgba(232,122,46,0.12);
+  --navy:#2B2D42;--navy-dark:#1A1B2E;
+  --bg:#F3EDE7;--bg-card:#FFFFFF;--bg-light:#F9F5F0;
+  --text-primary:#2B2D42;--text-secondary:#6B6D7B;--text-muted:#9597A6;
+  --border:#E5DDD4;--green:#4CAF50;--green-light:#E8F5E9;--red:#D9534F;--red-light:#FBEAEA;
+  --shadow-sm:0 2px 8px rgba(43,45,66,0.06);--shadow-md:0 8px 24px rgba(43,45,66,0.08);--shadow-lg:0 16px 48px rgba(43,45,66,0.12);
+  --radius:14px;--radius-sm:8px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(circle at 12% 18%,rgba(232,122,46,0.07),transparent 42%),radial-gradient(circle at 88% 82%,rgba(76,175,80,0.06),transparent 45%);pointer-events:none;z-index:0}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2rem;background:rgba(243,237,231,0.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.lesson-kicker{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
+.lesson-kicker .pip{width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 4px var(--orange-glow);animation:pulse 2s infinite}
+.brand{display:flex;align-items:center;gap:.7rem;text-decoration:none}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;text-align:right}
+.brand-name{font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--navy)}.brand-name span{color:var(--orange)}
+.brand-tag{font-size:.6rem;color:var(--text-muted);font-weight:600;letter-spacing:.02em}
+.brand-logo{width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(232,122,46,0.22));animation:float 3.4s ease-in-out infinite}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:2rem 1.5rem 3rem}
+.lesson-head{text-align:center;margin-bottom:1.4rem}
+.lesson-title{font-family:'DM Serif Display',serif;font-size:clamp(1.9rem,4.2vw,2.9rem);line-height:1.12;color:var(--navy)}
+.lesson-title em{font-style:normal;color:var(--orange)}
+.lesson-intro{font-size:.95rem;color:var(--text-secondary);max-width:560px;margin:.7rem auto 0;line-height:1.6}
+.rail{display:flex;align-items:center;gap:.4rem;max-width:560px;margin:1.6rem auto .4rem;padding:0 .3rem}
+.rail-seg{flex:1;height:5px;border-radius:5px;background:var(--border);overflow:hidden;cursor:pointer}
+.rail-seg span{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--orange),var(--orange-light));transition:width .35s ease}
+.rail-seg.done span,.rail-seg.active span{width:100%}
+.rail-count{text-align:center;font-size:.72rem;font-weight:600;color:var(--text-muted);letter-spacing:.04em;margin-bottom:1.2rem}
+.stage{position:relative;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);overflow:hidden;min-height:540px}
+.stage::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--orange),var(--orange-light),var(--green));z-index:3}
+.scene{display:none;padding:2.4rem 2rem 2rem;min-height:540px;flex-direction:column}
+.scene.active{display:flex;animation:sceneIn .5s ease}
+.scene-step{display:inline-flex;align-items:center;gap:.5rem;align-self:center;font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--orange);background:var(--orange-glow);padding:.35rem .85rem;border-radius:50px;margin-bottom:.5rem}
+.scene-h{font-family:'DM Serif Display',serif;font-size:clamp(1.3rem,2.8vw,1.85rem);color:var(--navy);text-align:center;line-height:1.2;margin-bottom:.3rem}
+.scene-canvas{flex:1;display:flex;align-items:center;justify-content:center;padding:1rem 0;min-height:300px}
+.scene-cap{text-align:center;font-size:.92rem;color:var(--text-secondary);line-height:1.65;max-width:620px;margin:0 auto;min-height:3.1em}
+.scene-cap b{color:var(--navy);font-weight:700}.scene-cap .hl{color:var(--orange);font-weight:700}
+.defbox{margin:.9rem auto 0;max-width:620px;background:var(--bg-light);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:var(--radius-sm);padding:.8rem 1rem;text-align:left}
+.defbox .dl{font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--orange);margin-bottom:.2rem}
+.defbox p{font-size:.82rem;color:var(--text-secondary);line-height:1.55}.defbox p b{color:var(--navy)}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.3rem}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1.5rem;border-radius:10px;font-size:.86rem;font-weight:700;font-family:inherit;border:none;cursor:pointer;transition:all .2s}
+.btn svg{width:15px;height:15px}
+.btn-prev{background:transparent;border:1.5px solid var(--border);color:var(--text-secondary)}
+.btn-prev:hover:not(:disabled){border-color:var(--orange);color:var(--orange)}.btn-prev:disabled{opacity:.35;cursor:not-allowed}
+.btn-next{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(232,122,46,0.28)}.btn-next:hover{background:var(--orange-dark);transform:translateY(-1px)}
+.btn-play{background:var(--navy-dark);color:#fff;padding:.7rem 1.1rem}.btn-play:hover{background:var(--navy)}.btn-play.playing{background:var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes sceneIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{0%{opacity:0;transform:scale(.6) translateY(8px)}60%{transform:scale(1.06)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
+@keyframes wobble{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+@keyframes stamp{0%{opacity:0;transform:scale(2) rotate(-12deg)}70%{opacity:1;transform:scale(.9) rotate(-12deg)}100%{transform:scale(1) rotate(-12deg)}}
+.scene .anim{opacity:0}
+.scene.play .anim{animation:popIn .5s ease forwards}
+.scene.play .s1{animation-delay:.05s}.scene.play .s2{animation-delay:.22s}.scene.play .s3{animation-delay:.4s}
+.scene.play .s4{animation-delay:.58s}.scene.play .s5{animation-delay:.76s}.scene.play .s6{animation-delay:.94s}.scene.play .s7{animation-delay:1.12s}
+.footnote{text-align:center;font-size:.74rem;color:var(--text-muted);margin-top:1.5rem;line-height:1.6}
+.tag{display:inline-block;padding:.45rem .85rem;border-radius:9px;font-weight:700;font-size:.84rem}
+@media(max-width:640px){.topbar{padding:.7rem 1rem}.brand-tag{display:none}.brand-logo{width:38px;height:38px}.scene{padding:1.8rem 1.1rem}.btn{padding:.65rem 1rem;font-size:.8rem}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="lesson-kicker"><span class="pip"></span> AI Foundations · Lesson 3</span>
+  <a class="brand" href="https://mokshpath.org/">
+    <div class="brand-text"><span class="brand-name">Moksh<span>Path</span></span><span class="brand-tag">Guided Path to True Learning</span></div>
+    <img class="brand-logo" src="hero.svg" alt="MokshPath mascot">
+  </a>
+</div>
+<div class="wrap">
+  <div class="lesson-head">
+    <h1 class="lesson-title">Why These Systems <em>Hallucinate</em></h1>
+    <p class="lesson-intro">It sounds confident even when it's wrong. Here's why that happens — and the one habit that makes the technology safe to use.</p>
+  </div>
+  <div class="rail" id="rail"></div>
+  <div class="rail-count" id="railCount">Step 1 of 7</div>
+  <div class="stage" id="stage">
+
+    <!-- SCENE 1 -->
+    <section class="scene" data-step="1">
+      <span class="scene-step">The root cause</span>
+      <h2 class="scene-h">It produces what's likely — not what's true</h2>
+      <div class="scene-canvas">
+        <div style="display:flex;align-items:center;justify-content:center;gap:1.6rem;flex-wrap:wrap">
+          <div class="anim s1 tag" style="background:var(--orange-glow);color:var(--orange-dark)">🎯 most likely next word</div>
+          <div class="anim s3" style="font-size:1.5rem;color:var(--text-muted)">vs</div>
+          <div class="anim s5 tag" style="background:var(--green-light);color:#2E7D32">✔️ the correct word</div>
+        </div>
+      </div>
+      <p class="scene-cap">A model has <b>no built-in lie detector</b>. It chooses the most plausible next token — and only <i>hopes</i> plausible and true are the same thing.</p>
+    </section>
+
+    <!-- SCENE 2 -->
+    <section class="scene" data-step="2">
+      <span class="scene-step">Good news first</span>
+      <h2 class="scene-h">Usually, likely and true line up</h2>
+      <div class="scene-canvas">
+        <svg width="320" height="220" viewBox="0 0 320 220">
+          <circle class="anim s1" cx="125" cy="110" r="85" fill="rgba(232,122,46,0.18)" stroke="var(--orange)" stroke-width="2"/>
+          <circle class="anim s2" cx="195" cy="110" r="85" fill="rgba(76,175,80,0.18)" stroke="var(--green)" stroke-width="2"/>
+          <text class="anim s1" x="78" y="55" font-size="12" font-weight="700" fill="var(--orange-dark)" font-family="Plus Jakarta Sans">Plausible</text>
+          <text class="anim s2" x="208" y="55" font-size="12" font-weight="700" fill="#2E7D32" font-family="Plus Jakarta Sans">True</text>
+          <text class="anim s4" x="160" y="116" font-size="13" font-weight="800" fill="var(--navy)" text-anchor="middle" font-family="Plus Jakarta Sans">big</text>
+          <text class="anim s4" x="160" y="134" font-size="13" font-weight="800" fill="var(--navy)" text-anchor="middle" font-family="Plus Jakarta Sans">overlap</text>
+        </svg>
+      </div>
+      <p class="scene-cap">Because the model has read so much <b>accurate</b> writing, accurate writing is usually what it produces. Most answers are fine.</p>
+    </section>
+
+    <!-- SCENE 3 -->
+    <section class="scene" data-step="3">
+      <span class="scene-step">Where it breaks</span>
+      <h2 class="scene-h">Ask for a precise fact it never learned…</h2>
+      <div class="scene-canvas">
+        <div style="text-align:center;width:100%;max-width:380px">
+          <div class="anim s1" style="background:var(--orange);color:#fff;border-radius:14px;border-bottom-right-radius:4px;padding:.6rem .9rem;font-size:.84rem;text-align:left;display:inline-block;max-width:300px">"Cite the exact clause and date of that regulation."</div>
+          <div class="anim s3" style="margin:1rem 0;font-size:1.4rem;color:var(--text-muted)">↓</div>
+          <div class="anim s4" style="background:var(--bg-light);border:1px solid var(--border);border-bottom-left-radius:4px;border-radius:14px;padding:.7rem .95rem;font-size:.84rem;text-align:left;display:inline-block;max-width:300px;color:var(--navy)">
+            "Section 14(b), enacted 12 March 2019." <span style="display:inline-block;margin-top:.4rem;font-size:.7rem;font-weight:700;color:var(--red);background:var(--red-light);padding:.15rem .5rem;border-radius:6px">⚠ confidently invented</span>
+          </div>
+        </div>
+      </div>
+      <p class="scene-cap">With no real answer to draw on, it fills the gap with something that <span class="hl">sounds</span> right — delivered just as confidently as a true one.</p>
+    </section>
+
+    <!-- SCENE 4 -->
+    <section class="scene" data-step="4">
+      <span class="scene-step">Name it</span>
+      <h2 class="scene-h">This is a hallucination</h2>
+      <div class="scene-canvas">
+        <div style="text-align:center">
+          <div class="anim s1" style="display:inline-block;font-size:3.2rem;animation:wobble 2.4s ease-in-out infinite">💭</div>
+          <div class="anim s3" style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;max-width:440px">
+            <span class="tag" style="background:var(--red-light);color:var(--red);font-size:.76rem">invented citation</span>
+            <span class="tag" style="background:var(--red-light);color:var(--red);font-size:.76rem">misattributed quote</span>
+            <span class="tag" style="background:var(--red-light);color:var(--red);font-size:.76rem">non-existent rule</span>
+            <span class="tag" style="background:var(--red-light);color:var(--red);font-size:.76rem">plausible-but-wrong date</span>
+          </div>
+        </div>
+      </div>
+      <p class="scene-cap">Hallucinations are <b>routine, not exotic</b> — and not a bug awaiting a patch. They're a property of how the system works.</p>
+      <div class="defbox">
+        <div class="dl">Definition · Hallucination</div>
+        <p>A confident assertion that <b>isn't supported by reality</b>. The goal isn't to eliminate them — it's to design your workflow so any hallucination is <b>caught before it leaves your desk</b>.</p>
+      </div>
+    </section>
+
+    <!-- SCENE 5 -->
+    <section class="scene" data-step="5">
+      <span class="scene-step">The professional rule</span>
+      <h2 class="scene-h">Delegate the doing — not the deciding-what's-true</h2>
+      <div class="scene-canvas">
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;justify-content:center;max-width:640px">
+          <div class="anim s1" style="flex:1;min-width:220px;background:var(--green-light);border:1px solid #c8e6c9;border-radius:12px;padding:1.1rem;text-align:left">
+            <div style="font-weight:800;color:#2E7D32;margin-bottom:.5rem;font-size:.86rem">✅ Safe to delegate</div>
+            <div style="font-size:.82rem;color:#3a6b3c;line-height:1.7">drafting · structuring · rephrasing · brainstorming · summarising</div>
+          </div>
+          <div class="anim s3" style="flex:1;min-width:220px;background:var(--orange-glow);border:1px solid #f3d4b6;border-radius:12px;padding:1.1rem;text-align:left">
+            <div style="font-weight:800;color:var(--orange-dark);margin-bottom:.5rem;font-size:.86rem">🙋 Stays with you</div>
+            <div style="font-size:.82rem;color:#9a5a26;line-height:1.7">verifying every fact, date, citation and figure before it's used</div>
+          </div>
+        </div>
+      </div>
+      <p class="scene-cap">Anywhere <b>truth matters more than fluency</b>, you cannot hand off the checking. That part is yours.</p>
+    </section>
+
+    <!-- SCENE 6 -->
+    <section class="scene" data-step="6">
+      <span class="scene-step">Build the habit</span>
+      <h2 class="scene-h">Put a verification gate in your workflow</h2>
+      <div class="scene-canvas">
+        <div style="display:flex;align-items:center;justify-content:center;gap:.7rem;flex-wrap:wrap">
+          <div class="anim s1" style="text-align:center"><div style="font-size:1.9rem">🤖</div><div style="font-size:.74rem;font-weight:700;color:var(--navy)">AI drafts</div></div>
+          <span class="anim s2" style="font-size:1.4rem;color:var(--orange)">→</span>
+          <div class="anim s3" style="text-align:center;background:var(--orange-glow);border:2px solid var(--orange);border-radius:12px;padding:.7rem .9rem"><div style="font-size:1.9rem">🔎</div><div style="font-size:.74rem;font-weight:800;color:var(--orange-dark)">YOU fact-check</div></div>
+          <span class="anim s4" style="font-size:1.4rem;color:var(--green)">→</span>
+          <div class="anim s5" style="text-align:center"><div style="font-size:1.9rem">📤</div><div style="font-size:.74rem;font-weight:700;color:var(--navy)">it ships</div></div>
+        </div>
+      </div>
+      <p class="scene-cap">Nothing leaves your desk until it passes the gate. The fact-check habit isn't a limit on the tool — it's <span class="hl">what makes the tool usable at all</span>.</p>
+    </section>
+
+    <!-- SCENE 7 -->
+    <section class="scene" data-step="7">
+      <span class="scene-step">Remember this</span>
+      <h2 class="scene-h">Confident ≠ correct</h2>
+      <div class="scene-canvas">
+        <div style="text-align:center;max-width:520px">
+          <div class="anim s1" style="font-size:1.15rem;font-weight:700;color:var(--navy);line-height:1.6;background:var(--bg-light);border-radius:14px;padding:1.4rem 1.6rem;border:1px solid var(--border)">
+            Treat AI as a brilliant, fast, <b style="color:var(--orange)">occasionally over-confident</b> assistant — never as a source of record.
+          </div>
+        </div>
+      </div>
+      <p class="scene-cap">Let it accelerate your thinking. Keep the final say — and the fact-checking — firmly in human hands.</p>
+      <div class="footnote">🧭 A good test: "If this single fact were wrong, would it matter?" If yes — verify it yourself.</div>
+    </section>
+
+  </div>
+  <div class="controls">
+    <button class="btn btn-prev" id="prevBtn" disabled><svg viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Back</button>
+    <button class="btn btn-play" id="playBtn"><svg viewBox="0 0 16 16" fill="none"><polygon points="4,3 13,8 4,13" fill="currentColor"/></svg> Auto-play</button>
+    <button class="btn btn-next" id="nextBtn">Next <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+</div>
+<script>
+const scenes=[...document.querySelectorAll('.scene')],total=scenes.length;
+let i=0,playing=false,timer=null;
+const rail=document.getElementById('rail'),railCount=document.getElementById('railCount');
+const prevBtn=document.getElementById('prevBtn'),nextBtn=document.getElementById('nextBtn'),playBtn=document.getElementById('playBtn');
+scenes.forEach((_,idx)=>{const seg=document.createElement('div');seg.className='rail-seg';seg.innerHTML='<span></span>';seg.onclick=()=>{stop();show(idx)};rail.appendChild(seg);});
+const segs=[...rail.children];
+function show(n){
+  i=Math.max(0,Math.min(total-1,n));
+  scenes.forEach((s,idx)=>{s.classList.toggle('active',idx===i);if(idx===i){s.classList.remove('play');void s.offsetWidth;s.classList.add('play');}});
+  segs.forEach((s,idx)=>{s.classList.toggle('done',idx<i);s.classList.toggle('active',idx===i);});
+  railCount.textContent=`Step ${i+1} of ${total}`;prevBtn.disabled=i===0;
+  nextBtn.innerHTML=i===total-1?'Restart <svg viewBox="0 0 16 16" fill="none"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2v3h-3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>':'Next <svg viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+function next(){i===total-1?show(0):show(i+1);}
+function stop(){playing=false;clearInterval(timer);playBtn.classList.remove('playing');playBtn.innerHTML='<svg viewBox="0 0 16 16" fill="none"><polygon points="4,3 13,8 4,13" fill="currentColor"/></svg> Auto-play';}
+function play(){playing=true;playBtn.classList.add('playing');playBtn.innerHTML='<svg viewBox="0 0 16 16" fill="none"><rect x="4" y="3" width="3" height="10" fill="currentColor"/><rect x="9" y="3" width="3" height="10" fill="currentColor"/></svg> Pause';timer=setInterval(()=>{i===total-1?stop():show(i+1);},4200);}
+prevBtn.onclick=()=>{stop();show(i-1)};nextBtn.onclick=()=>{stop();next()};playBtn.onclick=()=>{playing?stop():play()};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){stop();next()}if(e.key==='ArrowLeft'){stop();show(i-1)}});
+show(0);
+</script>
+</body>
+</html>
